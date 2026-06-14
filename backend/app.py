@@ -1,11 +1,14 @@
 from flask import Flask
 from flask import request
 from flask import jsonify
+from flask_cors import CORS
 
-from predict import predict_sentiment
+from backend.predict import predict_sentiment
 
 
 app = Flask(__name__)
+
+CORS(app)
 
 
 @app.route("/")
@@ -29,6 +32,14 @@ def predict():
         ""
     )
 
+    if not text.strip():
+
+        return jsonify(
+            {
+                "error": "Text cannot be empty"
+            }
+        ), 400
+
     sentiment = predict_sentiment(
         text
     )
@@ -45,6 +56,6 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=5000,
+        port=5001,
         debug=True
     )
