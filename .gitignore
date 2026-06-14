@@ -216,3 +216,23 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# MacOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# ML Models (optional)
+*.pkl
+*.joblib
+
+# Large datasets (optional)
+*.csv
+
+# Chrome extension build files
+dist/
+
+# Logs
+logs/
+*.log
