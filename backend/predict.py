@@ -31,7 +31,7 @@ def predict_sentiment(text):
     label_map ={
         0:"Neutral",
         1:"Positive",
-        2:"Negtive"
+        2:"Negative"
     }
 
     return label_map[prediction]
