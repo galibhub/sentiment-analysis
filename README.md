@@ -11,7 +11,9 @@ The project combines Natural Language Processing (NLP), Machine Learning, Flask 
 ---
 
 ## Demo
+### Chrome Extension UI
 
+![Sentiment AI Chrome Extension UI](assets/ui.jpg)
 ### Extension Dashboard
 
 ![YouTube Sentiment Insights Dashboard](assets/dashboard-demo.jpg)
