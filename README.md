@@ -1,122 +1,191 @@
 # YouTube Sentiment Insights
 
-A Machine Learning-powered Chrome Extension that analyzes YouTube comments and provides real-time audience sentiment insights through an interactive dashboard.
+A Machine Learning-powered Chrome Extension that analyzes YouTube comments and visualizes audience sentiment through an interactive dashboard.
+
+<p align="center">
+  <img src="assets/ui.jpg" alt="YouTube Sentiment Insights Chrome Extension" width="350">
+</p>
+
+<p align="center">
+  <img src="assets/dashboard-demo.jpg" alt="YouTube Sentiment Insights Dashboard" width="850">
+</p>
+
+<p align="center">
+  <strong>Python · Scikit-learn · LightGBM · Flask · JavaScript · Chrome Extension</strong>
+</p>
+
+## Project Demo Video
+
+[Watch the YouTube Sentiment Insights demo](https://drive.google.com/file/d/1BI5_D8ACGUpPkHf5ZndWbBBsWgWBs5-i/view)
+
+---
 
 ## Overview
 
-YouTube Sentiment Insights helps users understand audience reactions to any YouTube video by automatically collecting comments, performing sentiment analysis, and visualizing the results through an intuitive dashboard.
+**YouTube Sentiment Insights** is an end-to-end Machine Learning application designed to analyze audience reactions to YouTube videos. It automatically collects comments, classifies their sentiment, and presents the results in an interactive analytics dashboard.
 
-The project combines Natural Language Processing (NLP), Machine Learning, Flask API development, and Chrome Extension development to deliver actionable sentiment analytics directly within the browser.
+The application combines Natural Language Processing (NLP), Machine Learning, Flask REST API development, and Chrome Extension technology to transform unstructured YouTube comments into meaningful sentiment insights.
 
----
+The system classifies comments into three sentiment categories:
 
-## Demo
-### Chrome Extension UI
+- Positive
+- Negative
+- Neutral
 
-![Sentiment AI Chrome Extension UI](assets/ui.jpg)
-### Extension Dashboard
+The final model, LightGBM, achieved **84.75% accuracy** on a held-out test dataset of 7,376 samples.
 
-![YouTube Sentiment Insights Dashboard](assets/dashboard-demo.jpg)
+## Key Features
 
-*Interactive dashboard showing audience sentiment distribution, overall mood detection, sentiment counts, average comment statistics, and real-time analytics generated from YouTube comments.*
+### 📊 Interactive Sentiment Dashboard
 
----
+- Total comments analyzed
+- Positive, negative, and neutral comment counts
+- Sentiment distribution visualization
+- Average words per comment
+- Overall audience mood detection
+- Interactive donut chart
+- Real-time analytics presentation
 
-## Features
+### 💬 Automated Comment Collection
 
-### Sentiment Analysis Dashboard
+- Automatically collects comments from YouTube videos
+- Supports dynamic content and infinite scrolling
+- Removes duplicate comments
+- Handles dynamically loaded YouTube content
+- Processes large comment collections in chunks
 
-* Total comment count
-* Positive comment count
-* Negative comment count
-* Neutral comment count
-* Average words per comment
-* Overall audience mood detection
-* Interactive donut chart visualization
+### 🤖 Machine Learning-Powered Analysis
 
-### Smart Comment Collection
+- NLP-based text preprocessing
+- TF-IDF feature extraction
+- LightGBM sentiment classification
+- Flask REST API integration
+- Automated sentiment prediction
 
-* Automatically scrolls through YouTube comments
-* Collects large numbers of comments using infinite scrolling
-* Removes duplicate comments
-* Handles dynamically loaded YouTube content
+### ⚡ Performance Optimizations
 
-### Machine Learning Powered
-
-* TF-IDF Vectorization
-* Text preprocessing pipeline
-* LightGBM classifier
-* Real-time prediction through Flask API
-
-### Performance Optimizations
-
-* Parallel API requests using Promise.all()
-* Chunked processing for large comment sets
-* Efficient duplicate removal using Set()
-* Asynchronous Chrome messaging
-
----
+- Parallel API requests using `Promise.all()`
+- Chunked processing for large comment collections
+- Efficient duplicate removal using JavaScript `Set`
+- Asynchronous Chrome messaging
+- Efficient inference through a pre-trained model
 
 ## System Architecture
 
 ```text
-YouTube Video
-      │
-      ▼
-Chrome Extension
-      │
-      ▼
-Comment Collection
-      │
-      ▼
-Flask REST API
-      │
-      ▼
-Text Preprocessing
-      │
-      ▼
-TF-IDF Vectorization
-      │
-      ▼
-LightGBM Model
-      │
-      ▼
-Sentiment Prediction
-      │
-      ▼
-Interactive Dashboard
+             YouTube Video
+                   |
+                   v
+          Chrome Extension
+                   |
+                   v
+         Comment Collection
+                   |
+                   v
+           Flask REST API
+                   |
+                   v
+         Text Preprocessing
+                   |
+                   v
+          TF-IDF Vectorizer
+                   |
+                   v
+          LightGBM Model
+                   |
+                   v
+        Sentiment Prediction
+                   |
+                   v
+       Interactive Dashboard
 ```
-
----
 
 ## Technology Stack
 
-### Machine Learning
+| Category | Technologies |
+|---|---|
+| Programming Language | Python, JavaScript |
+| Machine Learning | Scikit-learn, LightGBM |
+| Natural Language Processing | NLTK, TF-IDF |
+| Data Processing | Pandas, NumPy |
+| Model Serialization | Joblib |
+| Backend | Flask, Flask-CORS |
+| Frontend | HTML5, CSS3, JavaScript |
+| Browser Extension | Chrome Extension Manifest V3 |
+| Data Visualization | Interactive Donut Chart |
 
-* Python
-* Scikit-learn
-* LightGBM
-* Pandas
-* NumPy
-* NLTK
-* Joblib
+## Machine Learning Pipeline
 
-### Backend
+The sentiment analysis pipeline consists of three major stages.
 
-* Flask
-* Flask-CORS
+### 1. Text Preprocessing
 
-### Frontend
+Raw YouTube comments are cleaned and normalized before feature extraction.
 
-* JavaScript
-* HTML5
-* CSS3
+The preprocessing pipeline includes:
 
-### Browser Extension
+- Lowercasing
+- URL removal
+- Punctuation removal
+- Stopword removal
+- Lemmatization
 
-* Chrome Extension Manifest V3
+### 2. Feature Extraction
 
----
+**TF-IDF (Term Frequency–Inverse Document Frequency)** converts preprocessed comments into numerical feature vectors.
+
+These vectors represent the importance of words in each comment and are used as input for the classification model.
+
+### 3. Sentiment Classification
+
+A pre-trained LightGBM classifier predicts one of three sentiment classes.
+
+| Label | Sentiment |
+|:---:|---|
+| 0 | Neutral |
+| 1 | Positive |
+| 2 | Negative |
+
+The predicted labels are returned through the Flask API and used to generate the sentiment analytics displayed in the Chrome Extension.
+
+## Model Performance
+
+Four Machine Learning algorithms were trained and evaluated on a held-out test dataset containing **7,376 samples**.
+
+### Model Comparison
+
+| Model | Accuracy |
+|---|---:|
+| Logistic Regression | 83.42% |
+| Random Forest | 63.61% |
+| XGBoost | 77.96% |
+| **LightGBM** | **84.75%** |
+
+LightGBM achieved the highest accuracy among the four evaluated models and was selected as the final model for deployment.
+
+### Classification Report
+
+| Sentiment | Precision | Recall | F1-Score |
+|---|---:|---:|---:|
+| Neutral | 0.81 | 0.97 | 0.89 |
+| Positive | 0.88 | 0.84 | 0.86 |
+| Negative | 0.84 | 0.67 | 0.75 |
+
+### Overall Evaluation Metrics
+
+| Metric | Value |
+|---|---:|
+| Accuracy | **84.75%** |
+| Macro F1-Score | **0.83** |
+| Weighted F1-Score | **0.84** |
+| Training Samples | 29,502 |
+| Test Samples | 7,376 |
+
+### Model Selection
+
+The final model was selected after comparing Logistic Regression, Random Forest, XGBoost, and LightGBM.
+
+LightGBM was selected based on its higher test accuracy among the evaluated models and its suitability for integration into the prediction API.
 
 ## Project Structure
 
@@ -146,94 +215,24 @@ sentiment-analysis/
 │   └── background.js
 │
 ├── assets/
+│   ├── ui.jpg
 │   └── dashboard-demo.jpg
 │
+├── requirements.txt
 └── README.md
 ```
 
----
+## API Documentation
 
-## Machine Learning Pipeline
-
-### 1. Text Preprocessing
-
-The preprocessing pipeline performs:
-
-* Lowercasing
-* URL removal
-* Punctuation removal
-* Stopword removal
-* Lemmatization
-
-### 2. Feature Extraction
-
-TF-IDF Vectorization is used to transform text into numerical features suitable for machine learning.
-
-### 3. Model Prediction
-
-The trained LightGBM model predicts one of three sentiment classes:
-
-| Label | Sentiment |
-| ----- | --------- |
-| 0     | Neutral   |
-| 1     | Positive  |
-| 2     | Negative  |
-
----
-
-## Model Performance
-
-The sentiment classification model was evaluated on a held-out test dataset containing **7,376 samples**.
-
-### Model Comparison
-
-| Model               | Accuracy   |
-| ------------------- | ---------- |
-| Logistic Regression | 83.42%     |
-| Random Forest       | 63.61%     |
-| XGBoost             | 77.96%     |
-| LightGBM            | **84.75%** |
-
-LightGBM achieved the highest accuracy and was selected as the final production model used by both the Flask API and Chrome Extension.
-
-### Classification Report
-
-| Sentiment | Precision | Recall | F1-Score |
-| --------- | --------- | ------ | -------- |
-| Neutral   | 0.81      | 0.97   | 0.89     |
-| Positive  | 0.88      | 0.84   | 0.86     |
-| Negative  | 0.84      | 0.67   | 0.75     |
-
-### Overall Metrics
-
-* Accuracy: **84.75%**
-* Macro F1-Score: **0.83**
-* Weighted F1-Score: **0.84**
-* Training Samples: **29,502**
-* Test Samples: **7,376**
-
-### Model Selection
-
-Multiple machine learning algorithms were trained and evaluated:
-
-* Logistic Regression
-* Random Forest
-* XGBoost
-* LightGBM
-
-After comparing performance across all models, LightGBM was selected due to its superior accuracy, strong generalization capability, and efficient inference speed for real-time sentiment prediction.
-
----
-
-## API Endpoint
+The application uses a Flask REST API to perform sentiment prediction.
 
 ### Predict Sentiment
 
-```http
-POST /predict
-```
+**Endpoint:** `POST /predict`
 
-### Request
+**Content-Type:** `application/json`
+
+#### Request
 
 ```json
 {
@@ -241,7 +240,7 @@ POST /predict
 }
 ```
 
-### Response
+#### Response
 
 ```json
 {
@@ -250,129 +249,136 @@ POST /predict
 }
 ```
 
----
+The endpoint accepts a text input and returns the corresponding sentiment prediction.
 
-## Installation
+## Installation and Setup
 
-### Clone Repository
+### Prerequisites
+
+- Python 3.11
+- Google Chrome
+- Git
+- pip
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/galibhub/sentiment-analysis.git
-
 cd sentiment-analysis
 ```
 
-### Create Environment
+### 2. Create a Virtual Environment
+
+Using Conda:
 
 ```bash
 conda create -n sentiment python=3.11
-
 conda activate sentiment
 ```
 
-### Install Dependencies
+Alternatively, using Python's built-in virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+## Running the Application
 
-## Run Backend
+### 1. Start the Flask Backend
+
+From the project root directory, run:
 
 ```bash
 python -m backend.app
 ```
 
-Server:
+The Flask server will be available at:
 
 ```text
 http://127.0.0.1:5001
 ```
 
----
+### 2. Load the Chrome Extension
 
-## Load Chrome Extension
+1. Open Google Chrome.
+2. Navigate to `chrome://extensions`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
+5. Select the project's `extension` directory.
+6. Pin the extension to the Chrome toolbar for easy access.
 
-1. Open Chrome
-2. Navigate to:
+### 3. Analyze YouTube Comments
 
-```text
-chrome://extensions
-```
+1. Start the Flask backend.
+2. Open a YouTube video in Chrome.
+3. Scroll down to load the video's comments.
+4. Click the YouTube Sentiment Insights extension icon.
+5. Click **Analyze Comments**.
+6. Wait for the comment collection and sentiment analysis to finish.
+7. Explore the resulting sentiment statistics and interactive dashboard.
 
-3. Enable Developer Mode
-4. Click **Load Unpacked**
-5. Select the extension folder
+## Example Dashboard Insights
 
----
+The dashboard provides the following analytics:
 
-## Usage
-
-1. Start the Flask backend
-2. Open any YouTube video
-3. Scroll down until comments load
-4. Click the extension icon
-5. Click **Analyze Comments**
-6. Wait for processing to complete
-7. View sentiment statistics and visualization
-
----
-
-## Example Dashboard Metrics
-
-* Total Comments Analyzed
-* Positive Sentiment Percentage
-* Neutral Sentiment Percentage
-* Negative Sentiment Percentage
-* Average Comment Length
-* Audience Mood Classification
-
----
+| Metric | Description |
+|---|---|
+| Total Comments | Total number of comments analyzed |
+| Positive Sentiment | Number of positive comments |
+| Negative Sentiment | Number of negative comments |
+| Neutral Sentiment | Number of neutral comments |
+| Average Words | Average number of words per comment |
+| Audience Mood | Overall sentiment-based audience mood |
+| Sentiment Distribution | Proportions of sentiment categories |
 
 ## Future Improvements
 
-* Batch prediction endpoint
-* Faster inference pipeline
-* Export analytics to CSV
-* Historical sentiment tracking
-* Channel-level analytics
-* Real-time sentiment monitoring
-* Topic modeling
-* Emotion detection
-* Multi-language support
+The following features are potential directions for further development:
 
----
+- **Batch Prediction API:** Reduce API overhead by predicting multiple comments in a single request.
+- **Inference Optimization:** Improve prediction throughput and reduce response latency.
+- **CSV Export:** Allow users to export sentiment analytics.
+- **Historical Sentiment Tracking:** Track sentiment changes over time.
+- **Channel-Level Analytics:** Analyze audience sentiment across multiple videos.
+- **Real-Time Monitoring:** Monitor sentiment as new comments become available.
+- **Topic Modeling:** Identify recurring topics and discussion themes.
+- **Emotion Detection:** Extend classification to emotions such as joy, anger, and sadness.
+- **Multilingual Support:** Extend sentiment analysis to additional languages.
 
 ## Learning Outcomes
 
-This project demonstrates practical experience with:
+This project provided practical experience in:
 
-* Natural Language Processing
-* Sentiment Analysis
-* Machine Learning Deployment
-* REST API Development
-* Chrome Extension Development
-* Asynchronous JavaScript
-* Frontend Data Visualization
-* End-to-End ML Application Development
-
----
+- Natural Language Processing and text preprocessing
+- TF-IDF feature engineering
+- Supervised Machine Learning
+- Model training and evaluation
+- Comparative analysis of classification algorithms
+- LightGBM model deployment
+- Flask REST API development
+- Chrome Extension development using Manifest V3
+- Asynchronous JavaScript and API integration
+- Interactive data visualization
+- End-to-end Machine Learning application development
 
 ## Author
 
-**Ibrahim Galib**
+**Ibrahim Ahmed Galib**
 
 Aspiring Machine Learning Engineer | MERN Stack Developer
 
-GitHub:
-https://github.com/galibhub
-
-LinkedIn:
-https://www.linkedin.com/in/ibrahim-galib
-
----
+<p>
+  <a href="https://github.com/galibhub">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/ibrahim-galib">LinkedIn</a>
+</p>
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
