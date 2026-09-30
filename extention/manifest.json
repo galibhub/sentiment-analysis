@@ -1,27 +1,32 @@
+
 {
   "manifest_version": 3,
   "name": "YouTube Sentiment Insights",
-  "version": "1.0",
-  "description": "Analyzes YouTube video comments for sentiment.",
+  "version": "2.0.0",
+  "description": "Analyze YouTube comments using machine learning",
 
   "action": {
+    "default_title": "Sentiment AI",
     "default_popup": "popup.html"
   },
 
   "permissions": [
-    "tabs",
-    "activeTab",
-    "scripting"
+    "activeTab"
   ],
 
   "host_permissions": [
-    "http://127.0.0.1:5000/*"
+    "http://127.0.0.1:5001/*"
   ],
 
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"]
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
     }
   ]
 }

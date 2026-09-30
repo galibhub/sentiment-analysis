@@ -1,127 +1,356 @@
-document.getElementById("analyze").addEventListener("click", async () => {
-  const btn = document.getElementById("analyze");
-  btn.innerText = "Fetching ALL comments... Please wait.";
 
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    currentWindow: true
-  });
+const btn = document.getElementById("analyze");
+const cancelBtn = document.getElementById("cancel");
+const statusEl = document.getElementById("status");
+const progressBar = document.getElementById("progressBar");
 
-  chrome.tabs.sendMessage(tab.id, { action: "getComments" }, async (texts) => {
-    
-    // ১. Error Handling: যদি YouTube পেজ রিলোড করা না থাকে বা content.js না পায়
-    if (chrome.runtime.lastError) {
-      console.error(chrome.runtime.lastError.message);
-      alert("Error: Extention not connected. Please REFRESH the YouTube page and try again.");
-      btn.innerText = "Analyze Comments";
-      return;
-    }
+let isRunning = false;
+let cancelled = false;
+let currentTabId = null;
+let abortController = null;
 
-    // ২. যদি কোনো কমেন্ট না পায়
-    if (!texts || texts.length === 0) {
-      alert("No comments found. Scroll down and try again.");
-      btn.innerText = "Analyze Comments";
-      return;
-    }
+const sleep = (ms) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-    btn.innerText = `Analyzing ${texts.length} comments fast...`;
+function setProgress(percent) {
+  progressBar.style.width =
+    `${Math.max(0, Math.min(100, percent))}%`;
+}
 
-    let pos = 0;
-    let neg = 0;
-    let neu = 0;
-    let totalWords = 0;
+function setRunning(value) {
+  isRunning = value;
+  btn.disabled = value;
+  cancelBtn.hidden = !value;
+}
 
-    // ৩. অপ্টিমাইজেশন: একসাথে ৫০টি রিকোয়েস্ট পাঠানোর জন্য Chunking বা ব্যাচ তৈরি করা
-    const chunkSize = 50; 
+function showError(message) {
+  statusEl.textContent = message;
+}
 
-    for (let i = 0; i < texts.length; i += chunkSize) {
-      const chunk = texts.slice(i, i + chunkSize);
-      
-      // Promise.all ব্যবহার করে একসাথে ৫০টি রিকোয়েস্ট পাঠানো হচ্ছে
-      const promises = chunk.map(async (text) => {
-        try {
-          const res = await fetch("http://127.0.0.1:5001/predict", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text })
-          });
-          const data = await res.json();
-          return { text, sentiment: data.sentiment };
-        } catch (error) {
-          console.error(error);
-          return null; // এরর হলে স্কিপ করবে
-        }
-      });
+function normalizeSentiment(value) {
+  const sentiment = String(value || "").toLowerCase();
 
-      // ৫০টি রিকোয়েস্টের রেজাল্ট একসাথে রিসিভ করা
-      const results = await Promise.all(promises);
+  if (sentiment.startsWith("positive")) return "positive";
+  if (sentiment.startsWith("negative")) return "negative";
+  if (sentiment.startsWith("neutral")) return "neutral";
 
-      // রেজাল্টগুলো কাউন্ট করা
-      results.forEach(result => {
-        if (result) {
-          totalWords += result.text.split(" ").length;
-          if (result.sentiment === "Positive") pos++;
-          else if (result.sentiment === "Negative") neg++;
-          else neu++;
-        }
-      });
-    }
+  return null;
+}
 
-    // ৪. ড্যাশবোর্ড আপডেট করা
-    const total = pos + neg + neu;
-    const avg = total > 0 ? (totalWords / total).toFixed(1) : 0;
+function calculateMood(pos, neu, neg) {
+  const max = Math.max(pos, neu, neg);
 
-    // --- UPDATED MOOD LOGIC (BUG FIX) ---
-    let mood = "Neutral 😐";
-    const highestCount = Math.max(pos, neg, neu);
+  if (max === 0) return "No results";
 
-    if (highestCount === neu && neu > 0) {
-      mood = "Neutral 😐";
-    } else if (highestCount === pos && pos > 0) {
-      mood = "Positive 😊";
-    } else if (highestCount === neg && neg > 0) {
-      mood = "Negative 😡";
-    } else if (pos === neg && pos > neu) {
-      mood = "Mixed 🤔"; 
-    }
-    // ------------------------------------
+  const leaders = [
+    ["Positive", pos],
+    ["Neutral", neu],
+    ["Negative", neg]
+  ].filter(([, count]) => count === max);
 
-    document.getElementById("dashboard").style.display = "block";
-    document.getElementById("total").innerText = total;
-    document.getElementById("avg").innerText = avg;
-    
-    document.getElementById("pos").innerText = pos;
-    document.getElementById("neg").innerText = neg;
-    document.getElementById("neu").innerText = neu;
-    document.getElementById("mood").innerText = mood;
+  if (leaders.length > 1) return "Mixed 🤔";
 
-    drawPie(pos, neu, neg);
-    btn.innerText = "Analyze Comments";
-  });
-});
+  if (leaders[0][0] === "Positive") return "Positive 😊";
+  if (leaders[0][0] === "Negative") return "Negative 😡";
 
-// ৫. পাই চার্ট (Donut Chart) তৈরি করার ফাংশন
+  return "Neutral 😐";
+}
+
 function drawPie(pos, neu, neg) {
   const total = pos + neu + neg;
-  if (total === 0) return;
-
-  const p = (pos / total) * 100;
-  const n = (neu / total) * 100;
-
   const pie = document.getElementById("pieChart");
 
-  pie.style.background = `conic-gradient(
-    #10b981 0% ${p}%,
-    #94a3b8 ${p}% ${p + n}%,
-    #f43f5e ${p + n}% 100%
-  )`;
+  if (!total) {
+    pie.style.background = "#334155";
+    return;
+  }
 
-  document.getElementById("centerText").innerHTML = `
-    <div style="font-size: 28px; font-weight: 800; color: #f8fafc;">
-      ${total}
-    </div>
-    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;">
-      Total
-    </div>
-  `;
+  const positiveEnd = (pos / total) * 100;
+  const neutralEnd = positiveEnd + (neu / total) * 100;
+
+  pie.style.background = `conic-gradient(
+    #10b981 0% ${positiveEnd}%,
+    #94a3b8 ${positiveEnd}% ${neutralEnd}%,
+    #f43f5e ${neutralEnd}% 100%
+  )`;
 }
+
+function renderDashboard(stats) {
+  const {
+    total,
+    positive,
+    neutral,
+    negative,
+    failed,
+    averageWords
+  } = stats;
+
+  document.getElementById("dashboard").style.display = "block";
+
+  document.getElementById("total").textContent = total;
+  document.getElementById("avg").textContent = averageWords;
+  document.getElementById("pos").textContent = positive;
+  document.getElementById("neu").textContent = neutral;
+  document.getElementById("neg").textContent = negative;
+  document.getElementById("failed").textContent = failed;
+
+  document.getElementById("centerTotal").textContent = total;
+  document.getElementById("mood").textContent =
+    calculateMood(positive, neutral, negative);
+
+  document.getElementById("details").textContent =
+    `Successfully analyzed: ${total} | Failed: ${failed}`;
+
+  drawPie(positive, neutral, negative);
+}
+
+function sendTabMessage(tabId, message) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(response);
+    });
+  });
+}
+
+function updateCollectionProgress(count, target) {
+  const percentage = target
+    ? Math.min(50, (count / target) * 50)
+    : 0;
+
+  setProgress(percentage);
+  statusEl.textContent =
+    `Collecting comments: ${count.toLocaleString()} / ${target.toLocaleString()}`;
+}
+
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (!isRunning || message.type !== "COLLECTION_PROGRESS") return;
+
+  if (
+    currentTabId !== null &&
+    sender.tab?.id !== currentTabId
+  ) {
+    return;
+  }
+
+  updateCollectionProgress(
+    message.collected || 0,
+    message.target || 0
+  );
+});
+
+async function predictOne(text, signal) {
+  const response = await fetch(
+    "http://127.0.0.1:5001/predict",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text }),
+      signal
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Prediction API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const sentiment = normalizeSentiment(data.sentiment);
+
+  if (!sentiment) {
+    throw new Error("Unknown sentiment returned by backend");
+  }
+
+  return sentiment;
+}
+
+async function analyzeComments(texts) {
+  const stats = {
+    total: 0,
+    positive: 0,
+    neutral: 0,
+    negative: 0,
+    failed: 0,
+    averageWords: 0
+  };
+
+  let totalWords = 0;
+  const concurrency = 5;
+
+  for (let i = 0; i < texts.length; i += concurrency) {
+    if (cancelled) break;
+
+    const chunk = texts.slice(i, i + concurrency);
+
+    statusEl.textContent =
+      `Analyzing ${Math.min(i + chunk.length, texts.length).toLocaleString()} / ${texts.length.toLocaleString()}`;
+
+    const results = await Promise.all(
+      chunk.map(async (text) => {
+        if (cancelled) return { failed: true };
+
+        try {
+          const sentiment = await predictOne(
+            text,
+            abortController.signal
+          );
+
+          return { text, sentiment };
+        } catch (error) {
+          if (error.name === "AbortError") {
+            return { cancelled: true };
+          }
+
+          console.error("Prediction failed:", error);
+          return { failed: true };
+        }
+      })
+    );
+
+    for (const result of results) {
+      if (result.cancelled) continue;
+
+      if (result.failed) {
+        stats.failed++;
+        continue;
+      }
+
+      stats.total++;
+
+      totalWords += result.text.trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
+
+      if (result.sentiment === "positive") {
+        stats.positive++;
+      } else if (result.sentiment === "negative") {
+        stats.negative++;
+      } else {
+        stats.neutral++;
+      }
+    }
+
+    setProgress(
+      50 + ((i + chunk.length) / texts.length) * 50
+    );
+
+    // Allow the popup to update between batches.
+    await sleep(0);
+  }
+
+  stats.averageWords = stats.total
+    ? Number((totalWords / stats.total).toFixed(1))
+    : 0;
+
+  return stats;
+}
+
+btn.addEventListener("click", async () => {
+  if (isRunning) return;
+
+  setRunning(true);
+  cancelled = false;
+  currentTabId = null;
+  abortController = new AbortController();
+
+  statusEl.textContent = "Connecting to YouTube...";
+  setProgress(0);
+  document.getElementById("dashboard").style.display = "none";
+
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+
+    if (!tab?.id || !tab.url?.startsWith("https://www.youtube.com/")) {
+      throw new Error("Please open a YouTube video first.");
+    }
+
+    currentTabId = tab.id;
+
+    const maxComments = Number(
+      document.getElementById("maxComments").value
+    );
+
+    if (
+      !Number.isInteger(maxComments) ||
+      maxComments < 1 ||
+      maxComments > 5000
+    ) {
+      throw new Error("Enter a number between 1 and 5000.");
+    }
+
+    statusEl.textContent = "Collecting YouTube comments...";
+
+    const response = await sendTabMessage(tab.id, {
+      action: "getComments",
+      maxComments
+    });
+
+    if (cancelled) return;
+
+    if (!response?.success) {
+      throw new Error(response?.error || "Could not collect comments.");
+    }
+
+    const texts = response.texts || [];
+
+    if (!texts.length) {
+      throw new Error("No comments found. Try a video with comments enabled.");
+    }
+
+    if (response.cancelled) {
+      throw new Error("Comment collection was cancelled.");
+    }
+
+    statusEl.textContent =
+      `Collected ${texts.length.toLocaleString()} comments. Starting analysis...`;
+
+    const stats = await analyzeComments(texts);
+
+    if (cancelled) return;
+
+    if (!stats.total) {
+      throw new Error("No comments were successfully analyzed.");
+    }
+
+    renderDashboard(stats);
+    setProgress(100);
+
+    statusEl.textContent = cancelled
+      ? "Analysis cancelled."
+      : "Analysis completed successfully.";
+  } catch (error) {
+    if (!cancelled) {
+      console.error(error);
+      showError(error.message);
+    }
+  } finally {
+    setRunning(false);
+    abortController = null;
+    currentTabId = null;
+  }
+});
+
+cancelBtn.addEventListener("click", async () => {
+  if (!isRunning) return;
+
+  cancelled = true;
+
+  if (currentTabId !== null) {
+    await sendTabMessage(currentTabId, {
+      action: "CANCEL_COLLECTION"
+    }).catch(() => {});
+  }
+
+  abortController?.abort();
+  statusEl.textContent = "Cancelling analysis...";
+  setRunning(false);
+});

@@ -2,228 +2,200 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Sentiment Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sentiment AI</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-
+    :root {
+      --bg: #0a1020;
+      --surface: rgba(255,255,255,.05);
+      --line: rgba(148,163,184,.2);
+      --text: #f1f5f9;
+      --muted: #b6c2d4;
+      --accent: linear-gradient(135deg, #22d3ee, #6366f1 60%, #a855f7);
+      --pos: #34d399; --neu: #cbd5e1; --neg: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; overflow: hidden; }
     body {
-      margin: 0;
-      background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
-      color: #f8fafc;
-      font-family: 'Inter', sans-serif;
-      width: 380px;
-      padding: 16px;
-      box-sizing: border-box;
-      overflow: hidden; /* Prevents any scrollbars from appearing */
+      width: 760px; height: 600px; padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+      background: radial-gradient(420px 260px at 8% 0%, rgba(99,102,241,.28), transparent 70%), var(--bg);
+      color: var(--text); font-size: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    h2 {
-      text-align: center;
-      font-weight: 800;
-      font-size: 20px;
-      margin: 0 0 16px 0;
-      background: linear-gradient(135deg, #38bdf8, #818cf8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; height: 46px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: var(--accent); box-shadow: 0 6px 20px rgba(99,102,241,.45); }
+    h2 { margin: 0; font-size: 26px; line-height: 1.1; font-weight: 800; letter-spacing: -.5px; background: var(--accent); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { margin-top: 2px; color: var(--muted); font-size: 13px; }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 600; }
+    .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 0 4px rgba(52,211,153,.18); }
 
-    button {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 10px;
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
-      color: white;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-      transition: all 0.3s ease;
-    }
+    /* Layout */
+    .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px 1fr; gap: 16px; }
+    .side { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .panel { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
-    }
+    label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+    input { width: 100%; padding: 12px 14px; border: 1px solid #475569; border-radius: 11px; outline: none; background: #111a30; color: #fff; font-size: 20px; font-weight: 700; -moz-appearance: textfield; }
+    input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input:focus { border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,.18); }
+    .chips { display: flex; gap: 6px; margin-top: 10px; }
+    .chip { flex: 1; width: auto; margin: 0; padding: 7px 0; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .chip:hover:not(:disabled) { border-color: #22d3ee; color: #fff; opacity: 1; }
+    .chip.active { border-color: transparent; background: var(--accent); color: #fff; }
+    .hint { margin-top: 9px; color: var(--muted); font-size: 12px; }
 
-    button:active {
-      transform: translateY(0);
-    }
+    button { width: 100%; margin-top: 12px; padding: 13px; border: none; border-radius: 12px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 22px rgba(99,102,241,.35); transition: transform .15s, opacity .15s; }
+    button:hover:not(:disabled) { opacity: .92; transform: translateY(-1px); }
+    button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    button:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+    #analyze::before { content: "▶"; margin-right: 9px; font-size: 11px; }
+    #cancel { background: #475569; box-shadow: none; }
+    #cancel::before { content: "✕"; margin-right: 9px; font-size: 12px; }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 16px;
-    }
+    .statuscard { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .status-head { margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+    .progress-track { height: 10px; margin-top: 14px; overflow: hidden; border-radius: 20px; background: #263248; }
+    #progressBar { width: 0%; height: 100%; border-radius: 20px; background: var(--accent); transition: width .2s ease; }
 
-    /* Glassmorphism Cards */
-    .card {
-      background: rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 10px 6px;
-      text-align: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s ease, background 0.2s ease;
-    }
+    /* Results */
+    .results { position: relative; display: flex; flex-direction: column; min-height: 0; }
+    .empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 30px; border: 2px dashed var(--line); border-radius: 18px; text-align: center; color: var(--muted); }
+    .empty svg { opacity: .8; }
+    .empty b { color: var(--text); font-size: 17px; }
+    .empty span { max-width: 270px; line-height: 1.5; }
 
-    .card:hover {
-      transform: translateY(-1px);
-      background: rgba(255, 255, 255, 0.07);
-    }
+    #dashboard { display: none; flex: 1; position: relative; z-index: 1; background: var(--bg); animation: fadeIn .3s ease; }
+    .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .card { min-width: 0; padding: 12px 8px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); text-align: center; }
+    .card.s { border-top: 3px solid currentColor; }
+    .card-label { margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .value { font-size: 26px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .positive { color: var(--pos); } .neutral { color: var(--neu); } .negative { color: var(--neg); }
 
-    .card-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #94a3b8;
-      margin-bottom: 4px;
-    }
+    .chart-panel { margin-top: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+    .chart-title { margin-bottom: 14px; font-size: 14px; font-weight: 700; }
+    .chart-body { display: flex; align-items: center; gap: 26px; }
+    .chart-wrap { flex: none; }
+    .pie { position: relative; display: grid; place-items: center; width: 172px; height: 172px; border-radius: 50%; background: #334155; box-shadow: 0 0 44px rgba(99,102,241,.3); }
+    .pie::before { position: absolute; width: 110px; height: 110px; border-radius: 50%; background: #0c1329; content: ""; }
+    .center-text { z-index: 1; text-align: center; }
+    #centerTotal { font-size: 28px; font-weight: 800; }
+    #centerLabel { margin-top: 2px; color: var(--muted); font-size: 12px; }
 
-    .value {
-      font-size: 16px;
-      font-weight: 800;
-      color: #ffffff;
-    }
+    .legend { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+    .legend-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 8px; row-gap: 6px; font-size: 14px; font-weight: 600; }
+    .legend-item b { font-size: 16px; font-variant-numeric: tabular-nums; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .lbar { grid-column: 1 / -1; height: 6px; overflow: hidden; border-radius: 6px; background: #263248; }
+    .lbar i { display: block; width: 0; height: 100%; border-radius: 6px; transition: width .4s ease; }
 
-    /* Spanning options for layout adjustments */
-    .span-2 {
-      grid-column: span 2;
-    }
-    
-    .span-3 {
-      grid-column: span 3;
-    }
+    .mood { margin-top: 14px; padding: 10px; border-radius: 11px; background: rgba(255,255,255,.06); text-align: center; font-size: 16px; font-weight: 800; }
+    .details { margin-top: 8px; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.45; }
 
-    .chart-container {
-      margin-top: 16px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 16px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+    /* Sentiment themes: body[data-theme] is set by ui-extras.js from the result */
+    body[data-theme="positive"] { --accent: linear-gradient(135deg, #10b981, #047857); --glow: rgba(16,185,129,.4); --solid: #34d399; --tint: rgba(16,185,129,.14); }
+    body[data-theme="negative"] { --accent: linear-gradient(135deg, #f43f5e, #be123c); --glow: rgba(244,63,94,.4); --solid: #fb7185; --tint: rgba(244,63,94,.14); }
+    body[data-theme="neutral"]  { --accent: linear-gradient(135deg, #7c8aa5, #475569); --glow: rgba(124,138,165,.4); --solid: #cbd5e1; --tint: rgba(148,163,184,.16); }
+    body[data-theme] { background: radial-gradient(420px 260px at 8% 0%, var(--glow), transparent 70%), var(--bg); }
+    body[data-theme] .logo { box-shadow: 0 6px 20px var(--glow); }
+    body[data-theme] #analyze { box-shadow: 0 8px 22px var(--glow); }
+    body[data-theme] .pie { box-shadow: 0 0 44px var(--glow); }
+    body[data-theme] input:focus { border-color: var(--solid); box-shadow: 0 0 0 3px var(--glow); }
+    body[data-theme] .chip:hover:not(:disabled) { border-color: var(--solid); }
+    body[data-theme] .mood { background: var(--tint); border: 1px solid var(--solid); color: var(--solid); }
 
-    /* Scaled down to 120px to fit entirely above the popup fold */
-    .pie {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      position: relative;
-      box-shadow: 0 0 12px rgba(0,0,0,0.2);
-    }
-
-    /* Converts the pie chart into a sleek donut chart */
-    .center-text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 70%;
-      height: 70%;
-      background: #111827; 
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
-    }
-
-    .legend {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 12px;
-      font-size: 11px;
-      color: #cbd5e1;
-      font-weight: 600;
-    }
-
-    .legend div {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    /* Fade-in animation for dashboard */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    #dashboard {
-      animation: fadeIn 0.3s ease forwards;
-    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
+
 <body>
-
-  <h2>Sentiment AI</h2>
-
-  <button id="analyze">Analyze Comments</button>
-
-  <div id="dashboard" style="display:none;">
-
-    <div class="grid">
-      <div class="card">
-        <div class="card-label">Total</div>
-        <div class="value" id="total">0</div>
+  <header class="header">
+    <div class="brand">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2M9 9.5h.01M15 9.5h.01"/></svg>
       </div>
-
-      <div class="card span-2">
-        <div class="card-label">Overall Mood</div>
-        <div class="value" id="mood">-</div>
-      </div>
-
-      <div class="card">
-        <div class="card-label">Positive</div>
-        <div class="value" id="pos">0</div>
-      </div>
-
-      <div class="card">
-        <div class="card-label">Neutral</div>
-        <div class="value" id="neu">0</div>
-      </div>
-
-      <div class="card">
-        <div class="card-label">Negative</div>
-        <div class="value" id="neg">0</div>
-      </div>
-
-      <div class="card span-3">
-        <div class="card-label">Average Words per Comment</div>
-        <div class="value" id="avg">0</div>
+      <div>
+        <h2>Sentiment AI</h2>
+        <div class="subtitle">YouTube Comment Intelligence</div>
       </div>
     </div>
+    <div class="pill"><i></i>Works on any YouTube video</div>
+  </header>
 
-    <div class="chart-container">
-      <div id="pieChart" class="pie">
-        <div id="centerText" class="center-text"></div>
+  <main class="layout">
+    <aside class="side">
+      <section class="panel">
+        <label for="maxComments">Maximum comments</label>
+        <input id="maxComments" type="number" min="1" max="5000" value="1000">
+        <div class="chips">
+          <button class="chip" type="button" data-v="100">100</button>
+          <button class="chip" type="button" data-v="500">500</button>
+          <button class="chip" type="button" data-v="1000">1k</button>
+          <button class="chip" type="button" data-v="2500">2.5k</button>
+          <button class="chip" type="button" data-v="5000">5k</button>
+        </div>
+        <div class="hint">Maximum target: 5,000 comments</div>
+
+        <button id="analyze">Analyze Comments</button>
+        <button id="cancel" hidden>Cancel Analysis</button>
+      </section>
+
+      <section class="panel statuscard">
+        <div class="status-head">Live status</div>
+        <div class="status" id="status" aria-live="polite">Ready to analyze</div>
+        <div class="progress-track"><div id="progressBar"></div></div>
+      </section>
+    </aside>
+
+    <section class="results">
+      <div class="empty">
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>
+        <b>No analysis yet</b>
+        <span>Open a YouTube video, choose how many comments to read, then press Analyze Comments.</span>
       </div>
 
-      <div class="legend">
-        <div><span class="dot" style="background:#10b981; box-shadow: 0 0 6px #10b981;"></span>Positive</div>
-        <div><span class="dot" style="background:#94a3b8; box-shadow: 0 0 6px #94a3b8;"></span>Neutral</div>
-        <div><span class="dot" style="background:#f43f5e; box-shadow: 0 0 6px #f43f5e;"></span>Negative</div>
-      </div>
-    </div>
+      <div id="dashboard">
+        <div class="summary">
+          <div class="card"><div class="card-label">Analyzed</div><div class="value" id="total">0</div></div>
+          <div class="card"><div class="card-label">Avg. words</div><div class="value" id="avg">0</div></div>
+          <div class="card"><div class="card-label">Failed</div><div class="value" id="failed">0</div></div>
+          <div class="card s positive"><div class="card-label">Positive</div><div class="value" id="pos">0</div></div>
+          <div class="card s neutral"><div class="card-label">Neutral</div><div class="value" id="neu">0</div></div>
+          <div class="card s negative"><div class="card-label">Negative</div><div class="value" id="neg">0</div></div>
+        </div>
 
-  </div>
+        <div class="chart-panel">
+          <div class="chart-title">Sentiment Distribution</div>
+          <div class="chart-body">
+            <div class="chart-wrap">
+              <div class="pie" id="pieChart">
+                <div class="center-text">
+                  <div id="centerTotal">0</div>
+                  <div id="centerLabel">Comments</div>
+                </div>
+              </div>
+            </div>
+            <div class="legend">
+              <div class="legend-item"><span class="dot" style="background:#10b981"></span>Positive<b id="posPct">0%</b><div class="lbar"><i id="posBar" style="background:#10b981"></i></div></div>
+              <div class="legend-item"><span class="dot" style="background:#94a3b8"></span>Neutral<b id="neuPct">0%</b><div class="lbar"><i id="neuBar" style="background:#94a3b8"></i></div></div>
+              <div class="legend-item"><span class="dot" style="background:#f43f5e"></span>Negative<b id="negPct">0%</b><div class="lbar"><i id="negBar" style="background:#f43f5e"></i></div></div>
+            </div>
+          </div>
+          <div class="mood" id="mood">-</div>
+          <div class="details" id="details"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <script src="popup.js"></script>
+  <script src="ui-extras.js"></script>
 </body>
 </html>
