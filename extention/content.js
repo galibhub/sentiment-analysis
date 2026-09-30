@@ -1,4 +1,3 @@
-
 console.log("Sentiment AI: Content script loaded");
 
 let collectionCancelled = false;
@@ -7,102 +6,163 @@ let isCollecting = false;
 const sleep = (ms) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-function getCommentNodes() {
-  return document.querySelectorAll(
-    "ytd-comment-thread-renderer #content-text"
-  );
+/* ---------- DOM helpers ---------- */
+
+function getThreads() {
+  return document.querySelectorAll("ytd-comment-thread-renderer");
 }
 
-function collectVisibleComments(comments) {
-  getCommentNodes().forEach((node) => {
-    const text = node.innerText?.trim();
+// The "loading spinner" item at the bottom of the comment list.
+// When it enters the viewport, YouTube loads the next batch.
+// We ignore the "show more replies" continuation items.
+function findContinuation() {
+  const items = Array.from(
+    document.querySelectorAll("ytd-comments ytd-continuation-item-renderer")
+  ).filter((el) => !el.closest("ytd-comment-replies-renderer"));
 
+  return items[items.length - 1] || null;
+}
+
+function getCommentId(thread) {
+  const link = thread.querySelector('a[href*="lc="]');
+  if (!link) return null;
+
+  try {
+    return new URL(link.href, location.origin).searchParams.get("lc");
+  } catch {
+    return null;
+  }
+}
+
+/* ---------- Collection ---------- */
+
+// state = { seen: WeakSet, ids: Set, texts: [] }
+function collectVisibleComments(state) {
+  getThreads().forEach((thread) => {
+    if (state.seen.has(thread)) return;
+
+    // Top-level comment text only (first #content-text in the thread).
+    const text = thread.querySelector("#content-text")?.innerText?.trim();
+
+    // Not rendered yet: don't mark as seen, we'll retry next round.
     if (!text) return;
 
-    // Keep separate comments even if their text is identical,
-    // when YouTube exposes a distinct comment thread ID.
-    const thread = node.closest("ytd-comment-thread-renderer");
-    const id = thread?.getAttribute("id");
+    state.seen.add(thread);
 
-    const key = id || text;
-
-    if (!comments.has(key)) {
-      comments.set(key, {
-        id: key,
-        text
-      });
+    const id = getCommentId(thread);
+    if (id) {
+      if (state.ids.has(id)) return;
+      state.ids.add(id);
     }
+
+    state.texts.push(text);
   });
 }
 
 function sendCollectionProgress(count, target) {
-  chrome.runtime.sendMessage({
-    type: "COLLECTION_PROGRESS",
-    collected: count,
-    target
-  }).catch(() => {});
+  chrome.runtime
+    .sendMessage({
+      type: "COLLECTION_PROGRESS",
+      collected: count,
+      target
+    })
+    .catch(() => {});
+}
+
+// Scroll so that YouTube's continuation item enters the viewport,
+// then "wiggle" so the IntersectionObserver fires again.
+async function triggerLoadMore() {
+  const threads = getThreads();
+  const last = threads[threads.length - 1];
+
+  last?.scrollIntoView({ block: "end", behavior: "instant" });
+
+  const continuation = findContinuation();
+  continuation?.scrollIntoView({ block: "center", behavior: "instant" });
+
+  await sleep(150);
+  window.scrollBy({ top: -400, behavior: "instant" });
+  await sleep(150);
+  window.scrollBy({ top: 800, behavior: "instant" });
 }
 
 async function autoScrollAndFetchAll(maxComments = 1000) {
-  const comments = new Map();
-  let unchangedRounds = 0;
-  let previousCount = 0;
+  const state = {
+    seen: new WeakSet(),
+    ids: new Set(),
+    texts: []
+  };
+
+  const MAX_STALLS = 6;                 // consecutive rounds with no new comments
+  const MAX_TIME = 15 * 60 * 1000;      // 15 min safety limit
+  const WAIT_STEP = 300;                // ms
+  const WAIT_ROUNDS = 20;               // 20 * 300ms = up to 6s per batch
+
+  let stalls = 0;
+  const startTime = Date.now();
 
   // Allow YouTube to render the comments section.
   await sleep(1000);
 
   const commentsSection = document.querySelector("#comments");
-
   if (commentsSection) {
     commentsSection.scrollIntoView({
       behavior: "instant",
       block: "start"
     });
-    await sleep(1000);
+    await sleep(1500);
   }
 
-  for (let round = 0; round < 100; round++) {
-    if (collectionCancelled) {
-      break;
-    }
+  while (Date.now() - startTime < MAX_TIME) {
+    if (collectionCancelled) break;
 
-    collectVisibleComments(comments);
-
-    if (comments.size >= maxComments) {
-      break;
-    }
+    collectVisibleComments(state);
 
     sendCollectionProgress(
-      Math.min(comments.size, maxComments),
+      Math.min(state.texts.length, maxComments),
       maxComments
     );
 
-    if (comments.size === previousCount) {
-      unchangedRounds++;
+    if (state.texts.length >= maxComments) break;
+
+    const before = getThreads().length;
+
+    await triggerLoadMore();
+
+    // Poll until new threads appear (works on slow internet too).
+    let grew = false;
+    for (let i = 0; i < WAIT_ROUNDS; i++) {
+      await sleep(WAIT_STEP);
+      if (collectionCancelled) break;
+
+      if (getThreads().length > before) {
+        grew = true;
+        break;
+      }
+    }
+
+    if (collectionCancelled) break;
+
+    if (grew) {
+      stalls = 0;
+      await sleep(300); // let the new batch finish rendering
     } else {
-      unchangedRounds = 0;
+      // If there is no continuation spinner left, the video has
+      // no more comments, so stop sooner.
+      stalls += findContinuation() ? 1 : 2;
+      if (stalls >= MAX_STALLS) break;
     }
-
-    if (unchangedRounds >= 8) {
-      break;
-    }
-
-    previousCount = comments.size;
-
-    window.scrollBy({
-      top: Math.max(window.innerHeight * 1.5, 1200),
-      behavior: "instant"
-    });
-
-    await sleep(1000);
   }
 
-  collectVisibleComments(comments);
+  collectVisibleComments(state);
 
-  return Array.from(comments.values())
-    .slice(0, maxComments)
-    .map((item) => item.text);
+  const result = state.texts.slice(0, maxComments);
+  sendCollectionProgress(result.length, maxComments);
+
+  return result;
 }
+
+/* ---------- Messaging ---------- */
 
 chrome.runtime.onMessage.addListener(
   (message, sender, sendResponse) => {
