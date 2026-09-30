@@ -3,11 +3,9 @@
 A Machine Learning-powered Chrome Extension that analyzes YouTube comments and visualizes audience sentiment through an interactive dashboard.
 
 <p align="center">
-  <img src="assets/ui.jpg" alt="YouTube Sentiment Insights Chrome Extension" width="350">
-</p>
-
-<p align="center">
-  <img src="assets/dashboard-demo.jpg" alt="YouTube Sentiment Insights Dashboard" width="850">
+  <img src="assets/ui.jpg" alt="YouTube Sentiment Insights Chrome Extension" width="40%">
+  &nbsp;&nbsp;
+  <img src="assets/dashboard-demo.jpg" alt="YouTube Sentiment Insights Dashboard" width="55%">
 </p>
 
 <p align="center">
